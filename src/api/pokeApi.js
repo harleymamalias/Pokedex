@@ -1,32 +1,50 @@
 export const fetchPokemonData = async ({ queryKey }) => {
-    const [, searchTerm, page] = queryKey;
-  
-    // fetch all pokemon data
-    const apiResponse = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1000'); 
-    const pokemonData = await apiResponse.json();
+  const [, searchTerm, page] = queryKey;
 
-    // filter pokemon based on the search term
-    const filteredData = pokemonData.results.filter((pokemon) =>
-      pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const rawPokemonData = await fetchRawPokemonData();
 
-    // pagination
-    const offset = (page - 1) * 10;
-    const paginatedData = filteredData.slice(offset, offset + 10); // Slice filtered data for current page
+  const filteredData = filterPokemonData(rawPokemonData, searchTerm);
 
-    // detailed data for the filtered and paginated pokemon
-    const pokemonDetails = await Promise.all(
-      paginatedData.map(async (pokemon) => {
-        const apiResponse = await fetch(pokemon.url);
-        const pokemonDetail = await apiResponse.json();
-        return {
-          id: pokemonDetail.id,
-          image: pokemonDetail.sprites.front_default,
-          name: pokemonDetail.name,
-          abilities: pokemonDetail.abilities.map((ability) => ability.ability.name),
-          type: pokemonDetail.types.map((type) => type.type.name).join(","),
-        };
-      })
-    );
-    return pokemonDetails;
+  const paginatedData = paginatePokemonData(filteredData, page);
+
+  const detailedData = await fetchPokemonDetails(paginatedData);
+
+  return detailedData; 
+};
+
+ const fetchRawPokemonData = async () => {
+  const apiResponse = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1000');
+  const data = await apiResponse.json();
+  return data.results; 
+};
+
+ const filterPokemonData = (pokemonList, searchTerm) => {
+  if (!searchTerm || searchTerm.length <= 2) {
+    return pokemonList; 
+  }
+  return pokemonList.filter((pokemon) =>
+    pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+};
+
+ const paginatePokemonData = (filteredList, page, itemsPerPage = 10) => {
+  const offset = (page - 1) * itemsPerPage;
+  return filteredList.slice(offset, offset + itemsPerPage);
+};
+
+ const fetchPokemonDetails = async (pokemonList) => {
+  const detailedData = await Promise.all(
+    pokemonList.map(async (pokemon) => {
+      const response = await fetch(pokemon.url);
+      const details = await response.json();
+      return {
+        id: details.id,
+        image: details.sprites.front_default,
+        name: details.name,
+        abilities: details.abilities.map((ability) => ability.ability.name),
+        type: details.types.map((type) => type.type.name).join(","),
+      };
+    })
+  );
+  return detailedData;
 };
