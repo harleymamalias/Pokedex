@@ -36,7 +36,7 @@ const PokedexPage = () => {
   } = useQuery({
     queryKey: ["pokemonData", debouncedSearchTerm, page],
     queryFn: fetchPokemonData,
-    staleTime: 5 * 1000 * 60,
+    staleTime: 2 * 1000 * 60,
     // preserve previous data while new data is loading
     keepPreviousData: true,
   });
