@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { capitalFirstLetter } from "../../utils/capitalizeFirstLetter";
+import LoadingSpinner from "../Loading/LoadingSpinner";
 
 const TableRow = styled.tr`
   background-color: #ffffff;
@@ -24,16 +25,22 @@ const TableCell = styled.td`
 `;
 
 const PokedexTableRow = ({ pokemon, viewPokemonDetail }) => {
+  const [loaded, setLoaded] = useState(false);
   return (
     <TableRow onClick={() => viewPokemonDetail(pokemon)}>
       <TableCell>{pokemon.id}</TableCell>
       <TableCell>
-        <img src={pokemon.image} alt={capitalFirstLetter(pokemon.name)} width="50" />
+        <img
+          src={pokemon.image}
+          alt={capitalFirstLetter(pokemon.name)}
+          width="50"
+          onLoad={() => setLoaded(true)}
+          stle={{ opacity: loaded ? 1 : <LoadingSpinner /> }}
+        />
       </TableCell>
       <TableCell>{capitalFirstLetter(pokemon.name)}</TableCell>
       <TableCell>{capitalFirstLetter(pokemon.type)}</TableCell>
     </TableRow>
-    
   );
 };
 

@@ -8,13 +8,13 @@ import PokedexPagination from "../components/Pagination/PokedexPagination";
 import PokedexModal from "../components/Modal/PokedexModal";
 import { useDebounce } from "use-debounce";
 import { usePokedexContext } from "../context/PokedexAppContext";
+import LoadingSpinner from "../components/Loading/LoadingSpinner";
 
 const PokedexContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  background-color: #f8f8f8;
   padding: 15px;
 `;
 
@@ -29,16 +29,21 @@ const PokedexPage = () => {
   } = usePokedexContext();
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
-  const { data: pokemonData, isLoading, isError } = useQuery({
-    queryKey: ["pokemonData", debouncedSearchTerm, page], 
-    queryFn: fetchPokemonData, 
+  const {
+    data: pokemonData,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["pokemonData", debouncedSearchTerm, page],
+    queryFn: fetchPokemonData,
+    staleTime: 5 * 1000 * 60,
     // preserve previous data while new data is loading
-    keepPreviousData: true, 
+    keepPreviousData: true,
   });
 
   // total number of filtered items
   const totalFilteredItems = pokemonData?.length || 0;
-  const totalPages = Math.ceil(totalFilteredItems / 10); 
+  const totalPages = Math.ceil(totalFilteredItems / 10);
 
   const handleNextPage = () => {
     if (page < totalPages) {
@@ -64,13 +69,15 @@ const PokedexPage = () => {
     <PokedexContainer>
       <PokedexSearch />
       {isLoading ? (
-        // lazy loading component (ideal)
-        <div>Loading...</div>
+        <LoadingSpinner />
       ) : isError ? (
         // error page component (ideal)
         <div>Error occurred while fetching data.</div>
       ) : (
-        <PokedexTable pokemonData={pokemonData} viewPokemonDetail={viewPokemonDetail} />
+        <PokedexTable
+          pokemonData={pokemonData}
+          viewPokemonDetail={viewPokemonDetail}
+        />
       )}
       <PokedexPagination />
       {selectedPokemon && (

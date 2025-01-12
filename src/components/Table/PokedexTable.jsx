@@ -1,7 +1,17 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import PokedexTableRow from "./PokedexTableRow";
 
+const smoothFadeIn = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateY(10px); /* Starts slightly below */
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0); /* Ends in normal position */
+  }
+`;
 
 const Table = styled.table`
   border-collapse: collapse;
@@ -29,6 +39,7 @@ const TableHead = styled.thead`
 
 const TableBody = styled.tbody`
   tr {
+    animation: ${smoothFadeIn} 0.6s ease-in-out forwards;
     &:nth-child(even) {
       background-color: #f9f9f9;
     }
@@ -46,6 +57,10 @@ const TableBody = styled.tbody`
 `;
 
 const PokedexTable = ({ pokemonData, viewPokemonDetail }) => {
+  if (!pokemonData || pokemonData.length === 0) {
+    return <div>No Pokémon found. Try searching for something else.</div>;
+  }
+
   return (
     <Table>
       <TableHead>
@@ -57,15 +72,14 @@ const PokedexTable = ({ pokemonData, viewPokemonDetail }) => {
         </tr>
       </TableHead>
       <TableBody>
-        {pokemonData.map((pokemon) => {
-          return (
-            <PokedexTableRow
-              key={pokemon.id}
-              pokemon={pokemon}
-              viewPokemonDetail={viewPokemonDetail}
-            />
-          );
-        })}
+        {pokemonData.map((pokemon, index) => (
+          <PokedexTableRow
+            key={pokemon.id}
+            pokemon={pokemon}
+            viewPokemonDetail={viewPokemonDetail}
+            style={{ animationDelay: `${index * 0.1}s` }} 
+          />
+        ))}
       </TableBody>
     </Table>
   );
