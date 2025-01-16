@@ -1,6 +1,11 @@
 import { Pokemon } from "../types/pokemon";
 import { PokemonDetails } from "../types/pokemonDetails";
 
+let cachedAllPokemon: Pokemon[] = [];
+const POKEMON_PER_PAGE = 10;
+const POKEMON_API_URL = "https://pokeapi.co/api/v2/pokemon?limit=1118";
+const SEARCH_LENGTH_THRESHOLD = 2;
+
 export const fetchPokemonData = async ({
     queryKey,
 }: {
@@ -8,48 +13,60 @@ export const fetchPokemonData = async ({
 }): Promise<PokemonDetails[]> => {
     const [, searchTerm, page] = queryKey;
 
-    const rawPokemonData = await fetchRawPokemonData();
-    const filterData = filterPokemonData(rawPokemonData, searchTerm);
-    const paginatedData = paginatePokemonData(filterData, page);
-    const detailedData = await fetchPokemonDetails(paginatedData);
+    const allPokemon = await getAllPokemon();
+    const filteredPokemon = filterPokemon(allPokemon, searchTerm);
 
-    return detailedData;
-}
+    const paginatedPokemon = paginate(filteredPokemon, page);
 
-const fetchRawPokemonData = async (): Promise<Pokemon[]> => {
-    const apiResponse = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1000");
-    const pokemonData = await apiResponse.json();
-    return pokemonData.results;
-}
+    return getPokemonDetails(paginatedPokemon);
+};
 
-const fetchPokemonDetails = async (pokemonList: Pokemon[]):
- Promise<PokemonDetails[]> => {
-    const pokemonDetailedData = await Promise.all(
-        pokemonList.map(async (pokemon) => {
-            const response = await fetch(pokemon.url);
-            const pokemonDetails = await response.json();
-            return {
-                id: pokemonDetails.id,
-                image: pokemonDetails.sprites.front_default,
-                name: pokemonDetails.name,
-                abilities: pokemonDetails.abilities.map((ability: any) => ability.ability.name),
-                type: pokemonDetails.types.map((type: any) => type.type.name).join(", "),
+//fetch all pokemon and cache the result
+const getAllPokemon = async (): Promise<Pokemon[]> => {
+    if (cachedAllPokemon.length > 0) {
+        return cachedAllPokemon;
+    }
 
-            }
-        })
-    ); 
-    return pokemonDetailedData;
- };
+    const response = await fetch(POKEMON_API_URL);
+    const data = await response.json();
+    cachedAllPokemon = data.results;
 
- const filterPokemonData = (pokemonList: Pokemon[], searchTerm: string): Pokemon[] => {
-    if(!searchTerm || searchTerm.length <= 2) {
+    return cachedAllPokemon;
+};
+
+const filterPokemon = (pokemonList: Pokemon[], searchTerm: string): Pokemon[] => {
+    if (!searchTerm || searchTerm.length <= SEARCH_LENGTH_THRESHOLD ){
         return pokemonList;
     }
-    return pokemonList.filter((pokemon) => pokemon.name.includes(searchTerm.toLowerCase()));
- };
 
- const paginatePokemonData = (pokemonList: Pokemon[], page: number,
- itemsPerPage: number = 10): Pokemon[] => {
-    const offset = (page - 1) * itemsPerPage;
-    return pokemonList.slice(offset, offset + itemsPerPage);
+    return pokemonList.filter((pokemon) =>
+        pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+};
+
+const paginate = (pokemonList: Pokemon[], page: number, itemsPerPage: number = POKEMON_PER_PAGE): Pokemon[] => {
+    const startIndex = (page - 1) * itemsPerPage;
+    return pokemonList.slice(startIndex, startIndex + itemsPerPage);
+};
+
+// fetch detailed pokemon details
+const getPokemonDetails = async (pokemonList: Pokemon[]): Promise<PokemonDetails[]> => {
+    const promises = pokemonList.map(fetchSinglePokemonDetails);
+    return Promise.all(promises);
+};
+
+const fetchSinglePokemonDetails = async (pokemon: Pokemon): Promise<PokemonDetails> => {
+    const response = await fetch(pokemon.url);
+    const data = await response.json();
+
+    return {
+        id: data.id,
+        image: data.sprites.front_default,
+        name: data.name,
+        abilities: data.abilities.map((ability: any) => ({
+            name: ability.ability.name,
+            isHidden: ability.is_hidden,
+        })),
+        type: data.types.map((type: any) => type.type.name),
+    };
 };
